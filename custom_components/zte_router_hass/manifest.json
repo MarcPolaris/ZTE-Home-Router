@@ -3,10 +3,10 @@
   "name": "ZTE Home Router",
   "codeowners": ["@MarcPolaris"],
   "config_flow": true,
-  "documentation": "https://github.com/MarcPolaris/ha-zte-home-router",
+  "documentation": "https://github.com/MarcPolaris/ZTE-Home-Router",
   "integration_type": "hub",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/MarcPolaris/ha-zte-home-router/issues",
+  "issue_tracker": "https://github.com/MarcPolaris/ZTE-Home-Router/issues",
   "loggers": ["zte_router_hass"],
   "requirements": ["requests>=2.25.1", "cryptography>=3.4"],
   "version": "1.0.0"
