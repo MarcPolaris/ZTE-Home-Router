@@ -1,0 +1,101 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "ZTE Home Router",
+        "description": "Set up your ZTE router. Credentials are the same as the router web console. Leave the device name empty to use the router model and IP.",
+        "data": {
+          "host": "Host",
+          "username": "Username",
+          "password": "Password",
+          "name": "Device name (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the router.",
+      "invalid_auth": "Login failed, please check the password.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This router is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ZTE Home Router options",
+        "data": {
+          "scan_interval": "State polling interval (seconds)",
+          "name": "Device name",
+          "full_interval": "Full refresh interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "uptime": "Uptime",
+      "wan_status": "WAN connection status",
+      "wan_connection_type": "WAN connection type",
+      "wan_ip": "WAN IP address",
+      "wan_gateway": "WAN gateway",
+      "wan_uptime": "WAN uptime",
+      "wan_rx_bytes": "WAN received",
+      "wan_tx_bytes": "WAN sent",
+      "ipv6_status": "IPv6 status",
+      "ipv6_address": "IPv6 address",
+      "dual_wan": "Dual WAN",
+      "ssid_2g": "2.4GHz SSID",
+      "wifi_2g_status": "2.4GHz WiFi status",
+      "ssid_5g": "5GHz SSID",
+      "wifi_5g_status": "5GHz WiFi status",
+      "guest_ssid_2g": "Guest 2.4GHz SSID",
+      "guest_wifi_2g_status": "Guest 2.4GHz WiFi status",
+      "guest_ssid_5g": "Guest 5GHz SSID",
+      "guest_wifi_5g_status": "Guest 5GHz WiFi status",
+      "led": "LED indicator",
+      "auto_restart": "Auto restart",
+      "connected_devices": "Connected devices",
+      "total_rx": "Total received",
+      "total_tx": "Total sent",
+      "model": "Model",
+      "software_version": "Firmware version",
+      "hardware_version": "Hardware version",
+      "manufacturer": "Manufacturer",
+      "serial_number": "Serial number",
+      "work_mode": "Working mode",
+      "mesh": "Mesh",
+      "wan_mac": "WAN MAC address",
+      "dns": "DNS servers",
+      "wifi_2g_channel": "2.4GHz channel",
+      "wifi_5g_channel": "5GHz channel",
+      "wifi_2g_rate": "2.4GHz max rate",
+      "wifi_5g_rate": "5GHz max rate",
+      "compat_ssid_2g": "Wi-Fi 5 compat 2.4GHz name",
+      "compat_ssid_5g": "Wi-Fi 5 compat 5GHz name",
+      "wifi_timer": "Wi-Fi schedule",
+      "wifi_timer_window": "Wi-Fi schedule window",
+      "ipv6_lla": "IPv6 LLA",
+      "ipv6_gateway": "IPv6 gateway"
+    },
+    "switch": {
+      "dual_band_sync": "WiFi dual band sync",
+      "mlo": "WiFi MLO aggregation",
+      "wifi_2g": "2.4GHz WiFi",
+      "hide_2g": "Hide 2.4GHz SSID",
+      "wifi_5g": "5GHz WiFi",
+      "hide_5g": "Hide 5GHz SSID",
+      "guest_wifi_2g": "Guest 2.4GHz WiFi",
+      "guest_wifi_5g": "Guest 5GHz WiFi",
+      "mumimo": "MU-MIMO",
+      "pause_tracker": "Pause tracker",
+      "wifi5_compat": "Wi-Fi 5 compatibility network",
+      "wifi5_compat_2g": "Wi-Fi 5 compatibility network 2.4GHz",
+      "wifi5_compat_5g": "Wi-Fi 5 compatibility network 5GHz"
+    },
+    "button": {
+      "reboot": "Reboot"
+    }
+  }
+}

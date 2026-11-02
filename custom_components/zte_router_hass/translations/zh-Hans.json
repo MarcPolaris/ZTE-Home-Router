@@ -1,0 +1,101 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "中兴家用路由器",
+        "description": "配置你的中兴路由器。账号密码与路由器 Web 管理界面一致。设备名称留空则自动使用型号和 IP。",
+        "data": {
+          "host": "主机地址",
+          "username": "用户名",
+          "password": "密码",
+          "name": "设备名称（可选）"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "无法连接到路由器。",
+      "invalid_auth": "登录失败，请检查密码。",
+      "unknown": "未知错误。"
+    },
+    "abort": {
+      "already_configured": "该路由器已配置。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "中兴家用路由器选项",
+        "data": {
+          "scan_interval": "状态轮询间隔（秒）",
+          "name": "设备名称",
+          "full_interval": "完整刷新间隔（秒，设备列表/拓扑）"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "uptime": "运行时间",
+      "wan_status": "WAN 连接状态",
+      "wan_connection_type": "WAN 连接类型",
+      "wan_ip": "WAN IP 地址",
+      "wan_gateway": "WAN 网关",
+      "wan_uptime": "WAN 连接时长",
+      "wan_rx_bytes": "WAN 接收流量",
+      "wan_tx_bytes": "WAN 发送流量",
+      "ipv6_status": "IPv6 状态",
+      "ipv6_address": "IPv6 地址",
+      "dual_wan": "双 WAN 功能",
+      "ssid_2g": "2.4GHz SSID",
+      "wifi_2g_status": "2.4GHz Wi-Fi 状态",
+      "ssid_5g": "5GHz SSID",
+      "wifi_5g_status": "5GHz Wi-Fi 状态",
+      "guest_ssid_2g": "访客 2.4GHz SSID",
+      "guest_wifi_2g_status": "访客 2.4GHz Wi-Fi 状态",
+      "guest_ssid_5g": "访客 5GHz SSID",
+      "guest_wifi_5g_status": "访客 5GHz Wi-Fi 状态",
+      "led": "指示灯",
+      "auto_restart": "自动重启",
+      "connected_devices": "连接设备数",
+      "total_rx": "总接收流量",
+      "total_tx": "总发送流量",
+      "model": "设备型号",
+      "software_version": "软件版本",
+      "hardware_version": "硬件版本",
+      "manufacturer": "制造商",
+      "serial_number": "序列号",
+      "work_mode": "工作模式",
+      "mesh": "Mesh 组网",
+      "wan_mac": "WAN MAC 地址",
+      "dns": "DNS 服务器",
+      "wifi_2g_channel": "2.4GHz Wi-Fi 信道",
+      "wifi_5g_channel": "5GHz Wi-Fi 信道",
+      "wifi_2g_rate": "2.4GHz 理论速率",
+      "wifi_5g_rate": "5GHz 理论速率",
+      "compat_ssid_2g": "Wi-Fi 5 兼容网络 2.4GHz 名称",
+      "compat_ssid_5g": "Wi-Fi 5 兼容网络 5GHz 名称",
+      "wifi_timer": "Wi-Fi 定时关闭",
+      "wifi_timer_window": "Wi-Fi 定时关闭时段",
+      "ipv6_lla": "IPv6 LLA",
+      "ipv6_gateway": "IPv6 网关"
+    },
+    "switch": {
+      "dual_band_sync": "Wi-Fi 双频合一",
+      "mlo": "Wi-Fi 频段聚合 (MLO)",
+      "wifi_2g": "2.4GHz Wi-Fi",
+      "hide_2g": "隐藏 2.4GHz SSID",
+      "wifi_5g": "5GHz Wi-Fi",
+      "hide_5g": "隐藏 5GHz SSID",
+      "guest_wifi_2g": "访客 2.4GHz Wi-Fi",
+      "guest_wifi_5g": "访客 5GHz Wi-Fi",
+      "mumimo": "MU-MIMO",
+      "pause_tracker": "暂停跟踪器",
+      "wifi5_compat": "Wi-Fi 5 兼容网络",
+      "wifi5_compat_2g": "Wi-Fi 5 兼容网络 2.4GHz",
+      "wifi5_compat_5g": "Wi-Fi 5 兼容网络 5GHz"
+    },
+    "button": {
+      "reboot": "重启路由器"
+    }
+  }
+}
