@@ -178,6 +178,7 @@ script:
 | **Dual-band state source** | Dual-band sync and MLO are read from `dualband_lua` — the same endpoint the web console uses. `wifi_advancedssid_data` keeps a stale copy of those two flags, so it is ignored. |
 | **MLO vs dual-band sync** | Mutually exclusive in firmware: enabling MLO turns dual-band sync off automatically (the web UI does the same). |
 | **Compatibility network** | Master switch `ForceWiFi` and per-band `Enable` (AP3 / AP7) are independent; band switches report the effective state. See the switch table above. |
+| **Reboot** | `POST ?_type=vueData&_tag=vue_derestart_data` with `IF_ACTION=Restart` — exactly what the web console sends. The router restarts immediately, so the HTTP reply is often cut off or never arrives; the integration therefore confirms the reboot by watching the router *leave the network* and only reports success once it is gone. |
 | **Privacy** | All traffic stays on your LAN. Credentials are stored by Home Assistant only and are never sent anywhere else. |
 
 ### Troubleshooting
@@ -386,6 +387,7 @@ script:
 | **双频合一的权威数据源** | 双频合一与 MLO 读的是 `dualband_lua`——Web 界面同款接口。`wifi_advancedssid_data` 里同名字段是过期副本，直接忽略。 |
 | **MLO 与双频合一互斥** | 固件行为：打开 MLO 会自动关闭双频合一（Web 界面同样如此）。 |
 | **兼容网络** | 总开关 `ForceWiFi` 与分频 `Enable`（AP3 / AP7）相互独立，分频开关显示生效状态，详见上方开关表。 |
+| **重启** | `POST ?_type=vueData&_tag=vue_derestart_data`，`IF_ACTION=Restart`——与 Web 界面完全同一调用。路由器会立刻重启，HTTP 响应经常被截断或根本收不到，因此集成以「路由器从网络上消失」作为成功判据，只有确认掉线才返回成功。 |
 | **隐私** | 所有通信仅发生在局域网内；凭据只由 Home Assistant 存储，不会发送到任何其他地方。 |
 
 ### 常见问题

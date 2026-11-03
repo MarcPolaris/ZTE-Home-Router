@@ -90,6 +90,8 @@ TAG_RESTART_CFG = "smart_restart_data"
 TAG_LAN_DEVICES = "localnet_lan_info_lua"
 TAG_TOPO = "vue_topo_data"
 TAG_REBOOT = "vue_derestart_data"
+# cheapest endpoint that answers with data (used to rotate the CSRF token)
+TAG_HEARTBEAT = "heartbeat_lua"
 TAG_CFG_PASSWORD = "vuecfg_data"
 TAG_WIFI_COMPAT = "vue_wifi_merger"
 TAG_WIFI_RADIO = "wlanConfig_data"
@@ -156,6 +158,11 @@ class ZTERouterClient:
         )
         self._session.hooks["response"] = [self._capture_token]
         self._token = ""
+        # True while _token still comes from the login response. The firmware
+        # refuses mutating POSTs that carry a login-issued token with -1452
+        # ("page expired"): the token has to be refreshed by a normal data
+        # response first. See _refresh_token().
+        self._token_from_login = False
         self._logged_in = False
         # RLock: every HTTP round trip (GET/POST) is serialized, including the
         # token rotation done by the response hook and any re-login retries.
@@ -225,17 +232,22 @@ class ZTERouterClient:
                 text = response.text
                 if self._is_html(text):
                     raise ZTEConnectionError(f"GET {tag} returned login page")
+            self._token_from_login = False
             return self._decode_body(text)
 
     def _post(self, tag: str, form: dict[str, Any], rtype: str = T_VUE) -> dict[str, Any]:
         url = f"{self.base_url}/?_type={rtype}&_tag={tag}"
         with self._lock:
+            if self._token_from_login:
+                # a login token is not accepted for writes; rotate it first
+                self._refresh_token()
             body = dict(form)
             body["_sessionTOKEN"] = self._token
             response = self._session.post(url, data=body, timeout=self.timeout)
             text = response.text
             if self._is_html(text):
                 self.login()
+                self._refresh_token()
                 body["_sessionTOKEN"] = self._token
                 response = self._session.post(url, data=body, timeout=self.timeout)
                 text = response.text
@@ -244,13 +256,21 @@ class ZTERouterClient:
             data = self._decode_body(text)
             error_id = str(data.get("IF_ERRORID", data.get("code", "0")))
             if error_id == ERROR_PAGE_EXPIRED:
-                # token raced: re-login and retry once
-                _LOGGER.debug("Page expired on POST %s, retrying", tag)
+                # token raced (or was rejected): re-login, rotate, retry once
+                _LOGGER.debug("Page expired on POST %s, retrying with fresh token", tag)
                 self.login()
+                self._refresh_token()
                 body["_sessionTOKEN"] = self._token
                 response = self._session.post(url, data=body, timeout=self.timeout)
                 data = self._decode_body(response.text)
                 error_id = str(data.get("IF_ERRORID", data.get("code", "0")))
+                if error_id == ERROR_PAGE_EXPIRED:
+                    # some firmware revisions accept the write and only then
+                    # report -1452 (e.g. radio restarts) - let the caller verify
+                    raise ZTECommandError(
+                        f"POST {tag} failed: {data.get('IF_ERRORSTR', 'page expired')} "
+                        f"(id={error_id})"
+                    )
             if error_id not in ("0", "SUCC"):
                 raise ZTECommandError(
                     f"POST {tag} failed: {data.get('IF_ERRORSTR', data.get('errPara', error_id))}"
@@ -307,7 +327,22 @@ class ZTERouterClient:
             elif not result.get("login_need_refresh"):
                 raise ZTEAuthError("Login failed, check username/password")
             self._logged_in = True
+            self._token_from_login = True
             _LOGGER.debug("Logged in to %s", self.host)
+
+    def _refresh_token(self) -> None:
+        """Trade the login token for a page token via a cheap data request.
+
+        The firmware only accepts mutating POSTs whose ``_sessionTOKEN`` was
+        issued by a normal API response; the token returned by the login
+        response is rejected with ``-1452``. Any GET rotates it.
+        """
+        try:
+            self._get(TAG_HEARTBEAT)
+        except (ZTEConnectionError, requests.RequestException) as err:
+            _LOGGER.debug("Token refresh failed, keeping current token: %s", err)
+            return
+        self._token_from_login = False
 
     def _ensure_login(self) -> None:
         if not self._logged_in:
@@ -1093,12 +1128,74 @@ class ZTERouterClient:
         }
         self._post(TAG_WIFI7_SPECIAL, form, rtype=T_VUEJSON)
 
-    def reboot(self) -> None:
-        """Reboot the router."""
-        self._ensure_login()
+    def _probe_alive(self, timeout: float = 3.0) -> bool:
+        """True while the router's web server still answers.
+
+        The root page needs no session, so this is safe to call before login
+        and while the router is going down.
+        """
         try:
-            self._post(TAG_REBOOT, {"IF_ACTION": "Restart"})
-        except ZTECommandError:
-            # some firmware revisions use the ..._datab tag
-            self._post("vue_derestart_datab", {"IF_ACTION": "Restart"})
+            response = self._session.get(self.base_url + "/", timeout=timeout)
+        except requests.RequestException:
+            return False
+        return response.status_code < 500
+
+    def _wait_for_reboot(self, attempts: int = 12, delay: float = 1.0) -> bool:
+        """Watch the router drop off the network after a reboot request.
+
+        Returns True once two consecutive probes fail (one failure alone can
+        be a dropped packet or a momentarily busy web server).
+        """
+        for _ in range(attempts):
+            time.sleep(delay)
+            if not self._probe_alive():
+                time.sleep(delay)
+                if not self._probe_alive():
+                    return True
+        return False
+
+    def _reset_session(self) -> None:
+        """Forget the session after the router restarted."""
         self._logged_in = False
+        self._token = ""
+        self._token_from_login = False
+        try:
+            self._session.cookies.clear()
+        except Exception:  # pragma: no cover - defensive
+            pass
+
+    def reboot(self) -> None:
+        """Reboot the router.
+
+        ``POST ?_type=vueData&_tag=vue_derestart_data`` with
+        ``IF_ACTION=Restart`` is what the web console sends (verified against
+        the Vue bundle). The reply is fire-and-forget: the router starts
+        restarting immediately, so the answer is often truncated, arrives as
+        the login page, or never arrives at all. A failed POST therefore does
+        **not** mean the reboot did not happen — the outcome is decided by
+        watching the router drop off the network, not by the HTTP status.
+        """
+        self._ensure_login()
+        last_err: Exception | None = None
+        for attempt in (1, 2):
+            try:
+                self._post(TAG_REBOOT, {"IF_ACTION": "Restart"})
+            except (ZTECommandError, ZTEConnectionError, requests.RequestException) as err:
+                last_err = err
+                _LOGGER.debug(
+                    "Reboot POST attempt %s did not answer cleanly "
+                    "(expected while the router restarts): %s",
+                    attempt,
+                    err,
+                )
+
+            if self._wait_for_reboot(attempts=10):
+                _LOGGER.debug("Router went offline after attempt %s: reboot accepted", attempt)
+                self._reset_session()
+                return
+            _LOGGER.debug("Router still reachable after reboot attempt %s", attempt)
+
+        raise ZTECommandError(
+            "reboot was not confirmed - the router is still reachable"
+            + (f" (last error: {last_err})" if last_err else "")
+        )
