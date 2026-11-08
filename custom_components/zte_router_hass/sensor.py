@@ -212,6 +212,141 @@ SENSORS: tuple[ZTESensorDescription, ...] = (
             (dig(d, "wan", "wan1", "tx_bytes") or 0) / 1024**3, 3
         ),
     ),
+    # ---------------- WAN 实时速率（vue_home_device_data） ----------------
+    ZTESensorDescription(
+        key="wan_down_rate",
+        translation_key="wan_down_rate",
+        name="WAN 实时下行速率",
+        icon="mdi:arrow-down-bold",
+        value_fn=lambda d: dig(d, "summary", "wan_down_rate") or "unknown",
+    ),
+    ZTESensorDescription(
+        key="wan_up_rate",
+        translation_key="wan_up_rate",
+        name="WAN 实时上行速率",
+        icon="mdi:arrow-up-bold",
+        value_fn=lambda d: dig(d, "summary", "wan_up_rate") or "unknown",
+    ),
+    ZTESensorDescription(
+        key="wan_negotiated_speed",
+        translation_key="wan_negotiated_speed",
+        name="WAN 协商速率",
+        icon="mdi:speedometer",
+        native_unit_of_measurement="Mbps",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: (
+            float(dig(d, "summary", "wan_speed"))
+            if str(dig(d, "summary", "wan_speed") or "").replace(".", "").isdigit()
+            else None
+        ),
+    ),
+    ZTESensorDescription(
+        key="access_device_num",
+        translation_key="access_device_num",
+        name="接入设备总数",
+        icon="mdi:counter",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: dig(d, "summary", "access_dev_num"),
+    ),
+    # ---------------- Mesh 漫游阈值（mesh_threshold_data） ----------------
+    ZTESensorDescription(
+        key="roam_rssi_24g",
+        translation_key="roam_rssi_24g",
+        name="Mesh 漫游阈值 2.4GHz",
+        icon="mdi:rss",
+        native_unit_of_measurement="dBm",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: dig(d, "roam", "rssi_24g"),
+    ),
+    ZTESensorDescription(
+        key="roam_rssi_5g",
+        translation_key="roam_rssi_5g",
+        name="Mesh 漫游阈值 5GHz",
+        icon="mdi:rss",
+        native_unit_of_measurement="dBm",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: dig(d, "roam", "rssi_5g"),
+    ),
+    ZTESensorDescription(
+        key="roam_legacy_sta",
+        translation_key="roam_legacy_sta",
+        name="老旧设备漫游",
+        icon="mdi:swap-horizontal-circle-outline",
+        value_fn=lambda d: "on" if dig(d, "roam", "legacy_roam") else "off",
+    ),
+    # ---------------- 网络/安全服务状态 ----------------
+    ZTESensorDescription(
+        key="dmz_status",
+        translation_key="dmz_status",
+        name="DMZ 主机",
+        icon="mdi:shield-half-full",
+        value_fn=lambda d: "on" if dig(d, "dmz", "enable") else "off",
+    ),
+    ZTESensorDescription(
+        key="ddns_status",
+        translation_key="ddns_status",
+        name="DDNS 状态",
+        icon="mdi:dns",
+        value_fn=lambda d: (
+            dig(d, "ddns", "status") or "off"
+            if dig(d, "ddns", "enable")
+            else "off"
+        ),
+    ),
+    ZTESensorDescription(
+        key="qos_status",
+        translation_key="qos_status",
+        name="智能 QoS",
+        icon="mdi:network-strength-4",
+        value_fn=lambda d: "on" if dig(d, "qos", "enable") else "off",
+    ),
+    ZTESensorDescription(
+        key="port_forward_rules",
+        translation_key="port_forward_rules",
+        name="端口转发规则数",
+        icon="mdi:swap-horizontal",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: dig(d, "portfw") or 0,
+    ),
+    ZTESensorDescription(
+        key="parental_devices",
+        translation_key="parental_devices",
+        name="家长控制设备数",
+        icon="mdi:shield-account",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: dig(d, "pctrl") or 0,
+    ),
+    ZTESensorDescription(
+        key="band_choice",
+        translation_key="band_choice",
+        name="Wi-Fi 频段优选",
+        icon="mdi:wifi-strength-4",
+        value_fn=lambda d: dig(d, "band", "band_choose") or "unknown",
+    ),
+    # ---------------- 系统时间与固件 ----------------
+    ZTESensorDescription(
+        key="ntp_sync",
+        translation_key="ntp_sync",
+        name="NTP 同步状态码",
+        icon="mdi:clock-check-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: dig(d, "ntp", "sync_status_code") or "unknown",
+    ),
+    ZTESensorDescription(
+        key="router_local_time",
+        translation_key="router_local_time",
+        name="路由器本地时间",
+        icon="mdi:clock-outline",
+        value_fn=lambda d: dig(d, "ntp", "local_time") or "unknown",
+    ),
+    ZTESensorDescription(
+        key="firmware_date",
+        translation_key="firmware_date",
+        name="固件发布日期",
+        icon="mdi:calendar-clock",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: dig(d, "fwver", "ver_date") or "unknown",
+    ),
     ZTESensorDescription(
         key="wifi_2g_channel",
         translation_key="wifi_2g_channel",

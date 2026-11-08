@@ -70,6 +70,9 @@ class ZTEDeviceTracker(CoordinatorEntity[ZTEDataUpdateCoordinator], ScannerEntit
     def _update_from_device(self, device: dict[str, Any]) -> None:
         hostname = device.get("hostname") or self._mac
         self._attr_name = hostname
+        # enrich with the per-client detail the app page exposes
+        # (vue_client_data): alias, IPv6 addresses, live rates, last seen
+        detail = (self.coordinator.data or {}).get("clients", {}).get(self._mac, {})
         self._attr_extra_state_attributes = {
             "mac": self._mac,
             "ip": device.get("ip"),
@@ -82,6 +85,13 @@ class ZTEDeviceTracker(CoordinatorEntity[ZTEDataUpdateCoordinator], ScannerEntit
             "device_type": device.get("device_type") or None,
             "rx_bytes": device.get("rx_bytes"),
             "tx_bytes": device.get("tx_bytes"),
+            "ipv6": detail.get("ipv6") or None,
+            "ipv6_gua": detail.get("ipv6_gua") or None,
+            "alias": detail.get("alias") or None,
+            "iface_type": detail.get("iface_type") or None,
+            "last_connection": detail.get("last_connection") or None,
+            "up_rate": detail.get("up_rate") or None,
+            "down_rate": detail.get("down_rate") or None,
         }
 
     @callback

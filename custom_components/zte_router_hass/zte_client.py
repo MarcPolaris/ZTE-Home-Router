@@ -100,6 +100,18 @@ TAG_ETHPORT = "vue_internet_ethport_data"
 # authoritative source for the dual-band-sync / MLO flags (the web UI reads
 # these from here as well; ``wifi_advancedssid_data`` reports stale values)
 TAG_DUALBAND = "dualband_lua"
+# --- endpoints discovered in the ZTE Smart Life app / newer web bundles ---
+TAG_CLIENTS = "vue_client_data"  # per-client detail: alias, IPv6, live rates
+TAG_HOME_DEVICE = "vue_home_device_data"  # per-router summary incl. WAN rates
+TAG_MESH_TH = "mesh_threshold_data"  # mesh roaming thresholds (writable)
+TAG_DMZ = "localnet_dmz_lua"
+TAG_DDNS = "ddns_data"
+TAG_QOS = "localnet_qosdyn_lua"
+TAG_SNTP = "sntp_lua"
+TAG_BAND = "frequency_select_data"
+TAG_PORTFW = "localnet_portforwarding_lua"
+TAG_PCTRL = "vue_pctrl_group_data"
+TAG_NOWVER = "vue_nowversion_lua"
 
 COMPAT_INST_2G = "DEV.WIFI.AP3"
 COMPAT_INST_5G = "DEV.WIFI.AP7"
@@ -718,6 +730,167 @@ class ZTERouterClient:
             compat["force_wifi"] = instance.get("ForceWiFi") == "1"
         return compat
 
+    # ------------------------------------------------------------------
+    # endpoints found in the ZTE Smart Life app / newer web bundles
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _data_instances(data: dict[str, Any]) -> list[dict[str, Any]]:
+        """Return the real data instances, dropping the page header.
+
+        The header instance carries ``OpenAndSlave``/``SoftwareVer`` and no
+        ``_InstID``; every data instance either has an ``_InstID`` (often an
+        empty string) or, like the client list, simply its own fields.
+        """
+        return [
+            i
+            for i in (data.get("instances") or [])
+            if isinstance(i, dict) and ("_InstID" in i or "OpenAndSlave" not in i)
+        ]
+
+    def get_client_details(self) -> dict[str, dict[str, Any]]:
+        """Rich per-client info keyed by MAC: alias, IPv6, live rates.
+
+        Complements ``get_lan_devices`` with the fields only the app page
+        exposes (the router web UI uses the same tag).
+        """
+        self._ensure_login()
+        data = self._get(TAG_CLIENTS)
+        clients: dict[str, dict[str, Any]] = {}
+        for instance in self._data_instances(data):
+            mac = instance.get("MACAddress")
+            if not mac or mac == "00:00:00:00:00:00":
+                continue
+            clients[mac.lower()] = {
+                "ipv6": instance.get("IPV6Addr", ""),
+                "ipv6_gua": instance.get("IPV6GuaAddr", ""),
+                "alias": instance.get("AliasName", ""),
+                "iface_type": instance.get("InterfaceType", ""),
+                "last_connection": instance.get("LastConnection", ""),
+                "up_rate": instance.get("UpRate", ""),
+                "down_rate": instance.get("DownRate", ""),
+            }
+        return clients
+
+    def get_router_summary(self) -> dict[str, Any]:
+        """Per-router overview: WAN rates/negotiated speed, device counts."""
+        self._ensure_login()
+        data = self._get(TAG_HOME_DEVICE)
+        for instance in data.get("instances") or []:
+            if "AccessDevNum" in instance:
+                return {
+                    "access_dev_num": int(instance.get("AccessDevNum", 0) or 0),
+                    "topo_ap_num": int(instance.get("TopoAPNum", 0) or 0),
+                    "wan_status_h": instance.get("WANStatus", ""),
+                    "wan_up_rate": instance.get("WANUpRate", ""),
+                    "wan_down_rate": instance.get("WANDownRate", ""),
+                    "wan_speed": instance.get("WANSpeed", ""),
+                    "dual_wan_enable": instance.get("DualWANEnable") == "1",
+                    "wan_up_rate2": instance.get("WANUpRate2", ""),
+                    "wan_down_rate2": instance.get("WANDownRate2", ""),
+                }
+        return {}
+
+    def get_roam_thresholds(self) -> dict[str, Any]:
+        """Mesh roaming thresholds (writable on the mesh settings page)."""
+        self._ensure_login()
+        data = self._get(TAG_MESH_TH)
+        merged: dict[str, Any] = {}
+        for instance in self._data_instances(data):
+            merged.update(instance)
+        merged.pop("_InstID", None)
+        return {
+            "rssi_24g": int(merged.get("RoamRssiLmt24G", 0) or 0),
+            "rssi_5g": int(merged.get("RoamRssiLmt5G", 0) or 0),
+            "legacy_roam": merged.get("EnLegacyStaRoam") == "1",
+            "btm_kickoff": merged.get("EnBtmKickoff") == "1",
+            "roam_kick": merged.get("EnRoamKick") == "1",
+        }
+
+    def get_dmz(self) -> dict[str, Any]:
+        """DMZ host status."""
+        self._ensure_login()
+        data = self._get(TAG_DMZ)
+        for instance in self._data_instances(data):
+            if "Enable" in instance:
+                return {
+                    "enable": instance.get("Enable") == "1",
+                    "internal_client": instance.get("InternalClient", ""),
+                }
+        return {"enable": False, "internal_client": ""}
+
+    def get_ddns(self) -> dict[str, Any]:
+        """DDNS status of the first configured provider."""
+        self._ensure_login()
+        data = self._get(TAG_DDNS)
+        for instance in self._data_instances(data):
+            if "Enable" in instance:
+                return {
+                    "enable": instance.get("Enable") == "1",
+                    "status": instance.get("Status", ""),
+                    "domain": instance.get("DomainName", ""),
+                    "service": instance.get("Service", ""),
+                }
+        return {"enable": False, "status": "", "domain": "", "service": ""}
+
+    def get_qos(self) -> dict[str, Any]:
+        """Dynamic QoS switch state."""
+        self._ensure_login()
+        data = self._get(TAG_QOS)
+        for instance in self._data_instances(data):
+            if "Enable" in instance:
+                return {"enable": instance.get("Enable") == "1"}
+        return {"enable": False}
+
+    def get_ntp(self) -> dict[str, Any]:
+        """NTP synchronisation status and the router's local time."""
+        self._ensure_login()
+        data = self._get(TAG_SNTP)
+        for instance in self._data_instances(data):
+            if "NtpServer1" in instance:
+                return {
+                    "sync_status_code": instance.get("SynStatusCode", ""),
+                    "local_time": instance.get("CurrentLocalTime", ""),
+                }
+        return {"sync_status_code": "", "local_time": ""}
+
+    def get_band_choice(self) -> dict[str, Any]:
+        """Band-steering preference (frequency_select_data)."""
+        self._ensure_login()
+        data = self._get(TAG_BAND)
+        for instance in self._data_instances(data):
+            if "BandChoose" in instance:
+                return {"band_choose": instance.get("BandChoose", "")}
+        return {"band_choose": ""}
+
+    def get_port_forward_count(self) -> int:
+        """Number of port-forwarding rules."""
+        self._ensure_login()
+        data = self._get(TAG_PORTFW)
+        return len(self._data_instances(data))
+
+    def get_parental_count(self) -> int:
+        """Number of devices under parental control."""
+        self._ensure_login()
+        data = self._get(TAG_PCTRL)
+        return len(self._data_instances(data))
+
+    def get_firmware_date(self) -> dict[str, Any]:
+        """Firmware build date and bootloader version."""
+        self._ensure_login()
+        data = self._get(TAG_NOWVER)
+        raw = ""
+        boot = ""
+        for instance in self._data_instances(data):
+            if "SoftwareVer" in instance:
+                raw = instance.get("VerDate", "")
+                boot = instance.get("BootVer", "")
+                break
+        ver_date = ""
+        if len(raw) >= 8 and raw[:8].isdigit():
+            ver_date = f"{raw[0:4]}-{raw[4:6]}-{raw[6:8]}"
+        return {"ver_date": ver_date, "boot_version": boot}
+
+
     def get_wifi_radio(self) -> dict[str, Any]:
         """Radio parameters: channel, bandwidth, standard, max rate."""
         self._ensure_login()
@@ -885,6 +1058,8 @@ class ZTERouterClient:
             "wifi": self.get_wifi_status,
             "guest_wifi": self.get_guest_wifi_status,
             "wifi_compat": self.get_wifi_compat,
+            "clients": self.get_client_details,
+            "summary": self.get_router_summary,
         }
         for key, reader in readers.items():
             try:
@@ -913,6 +1088,15 @@ class ZTERouterClient:
             "ports": self.get_port_status,
             "lan_devices": self.get_lan_devices,
             "topology": self.get_topology,
+            "roam": self.get_roam_thresholds,
+            "dmz": self.get_dmz,
+            "ddns": self.get_ddns,
+            "qos": self.get_qos,
+            "ntp": self.get_ntp,
+            "band": self.get_band_choice,
+            "portfw": self.get_port_forward_count,
+            "pctrl": self.get_parental_count,
+            "fwver": self.get_firmware_date,
         }
         for key, reader in readers.items():
             try:

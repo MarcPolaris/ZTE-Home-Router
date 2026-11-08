@@ -7,7 +7,7 @@
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.10%2B-41BDF5.svg)](https://www.home-assistant.io/)
-[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)](https://github.com/MarcPolaris/ZTE-Home-Router/releases)
+[![Version](https://img.shields.io/badge/version-1.0.2-brightgreen.svg)](https://github.com/MarcPolaris/ZTE-Home-Router/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=MarcPolaris&repository=ZTE-Home-Router&category=integration)
@@ -60,18 +60,20 @@ Any ZTE router whose web console speaks the same `?_type=vueData|hiddenData|vuej
 
 > **How the compatibility network behaves.** On the router page there is one master switch and two band switches, all independent. A firmware quirk: after the master switch is turned off, both band switches stay "on" internally (the SSIDs are simply not broadcast), and turning the master back on restores them. To avoid a misleading "master off, bands still on" state, the two band switches in Home Assistant show the **effective** state (`master on AND band on`): with the master off they read *off*, and turning either band on automatically turns the master on. Turning the master on while both bands are off turns both bands on.
 
-#### Sensors (43)
+#### Sensors (59)
 
 | Group | Entities |
 | :-- | :-- |
-| **System** | Uptime · Working mode · Mesh status · LED indicator · Auto restart · Connected devices |
-| **WAN** | Connection status · Connection type · IP address · Gateway · MAC · DNS servers · Uptime · Dual WAN · Received / Sent traffic · IPv6 status / address / LLA / gateway |
-| **Wi-Fi main** | 2.4GHz SSID + status + channel + max rate · 5GHz SSID + status + channel + max rate |
+| **System** | Uptime · Working mode · Mesh status · LED indicator · Auto restart · Connected devices · Access devices total |
+| **WAN** | Connection status · Connection type · IP address · Gateway · MAC · DNS servers · Uptime · Dual WAN · Received / Sent traffic · IPv6 status / address / LLA / gateway · **Live up / down rate** · **Negotiated speed** |
+| **Wi-Fi main** | 2.4GHz SSID + status + channel + max rate · 5GHz SSID + status + channel + max rate · Band preference |
 | **Guest Wi-Fi** | Guest 2.4GHz SSID + status · Guest 5GHz SSID + status |
 | **Compatibility network** | Wi-Fi 5 compat 2.4GHz / 5GHz SSID |
 | **Schedule** | Wi-Fi schedule · Wi-Fi schedule window (read-only) |
 | **Traffic totals** | Total received · Total sent |
-| **Diagnostic** | Model · Firmware version · Hardware version · Manufacturer · Serial number |
+| **Mesh roaming** | Roaming threshold 2.4GHz / 5GHz (dBm) · Legacy device roaming |
+| **Network services** | DMZ host · DDNS status · Smart QoS · Port forwarding rules · Parental control devices |
+| **Diagnostic** | Model · Firmware version · Hardware version · Manufacturer · Serial number · Firmware release date · NTP sync · Router local time |
 
 #### Button (1)
 
@@ -81,7 +83,7 @@ Any ZTE router whose web console speaks the same `?_type=vueData|hiddenData|vuej
 
 #### Device tracker (one per client)
 
-`home` / `not_home`, with attributes: `mac`, `ip`, `hostname`, `connection_type` (LAN / 2.4GHz / 5GHz), `interface`, `band`, `rssi`, `is_guest`, `parent_device` (upstream mesh node), `device_type`, `rx_bytes`, `tx_bytes`.
+`home` / `not_home`, with attributes: `mac`, `ip`, `hostname`, `connection_type` (LAN / 2.4GHz / 5GHz), `interface`, `band`, `rssi`, `is_guest`, `parent_device` (upstream mesh node), `device_type`, `rx_bytes`, `tx_bytes`, plus from the app-side client table: `alias` (name set in the ZTE app), `ipv6` / `ipv6_gua`, `iface_type`, `last_connection`, `up_rate` / `down_rate` (live).
 
 ### Installation
 
@@ -112,8 +114,8 @@ After setup, open **Configure** on the integration to tune polling:
 
 | Option | Default | Range | What it refreshes |
 | :-- | :-- | :-- | :-- |
-| Status interval | 5 s | 3–600 s | Wi-Fi, WAN, MU-MIMO — state changed in the router UI or the ZTE app shows up here within seconds |
-| Full interval | 30 s | — | Device list, mesh topology, LED / auto-restart |
+| Status interval | 5 s | 3–600 s | Wi-Fi, WAN, MU-MIMO, client detail (rates/IPv6) — state changed in the router UI or the ZTE app shows up here within seconds |
+| Full interval | 30 s | — | Device list, mesh topology, LED / auto-restart, mesh roaming thresholds, DMZ / DDNS / QoS / NTP status |
 
 All entities hang off one device registered during the config flow (unique id = router serial number). The integration ships its own brand icon, so the device is rendered with the ZTE logo.
 
@@ -267,18 +269,20 @@ logger:
 
 > **兼容网络的显示逻辑**：路由器页面上是「1 个总开关 + 2 个频段开关」，三者互相独立。固件有个特性：总开关关掉后，两个频段的 `Enable` 在底层仍是开的（只是不广播 SSID），重新打开总开关即原样恢复。为避免 HA 里出现「总开关关了、频段还显示开」的误导，两个频段开关显示的是**生效状态**（总开关开 **且** 该频段开）：总开关关闭时频段开关显示为关；此时打开任一频段会自动把总开关一起打开；总开关打开时若两个频段都关着，会自动把两个频段一起打开。
 
-#### 传感器（43 个）
+#### 传感器（59 个）
 
 | 分组 | 实体 |
 | :-- | :-- |
-| **系统** | 运行时间 · 工作模式 · Mesh 组网 · 指示灯 · 自动重启 · 连接设备数 |
-| **WAN** | 连接状态 · 连接类型 · IP 地址 · 网关 · MAC · DNS 服务器 · 连接时长 · 双 WAN · 接收 / 发送流量 · IPv6 状态 / 地址 / LLA / 网关 |
-| **主 Wi-Fi** | 2.4GHz SSID + 状态 + 信道 + 理论速率 · 5GHz SSID + 状态 + 信道 + 理论速率 |
+| **系统** | 运行时间 · 工作模式 · Mesh 组网 · 指示灯 · 自动重启 · 连接设备数 · 接入设备总数 |
+| **WAN** | 连接状态 · 连接类型 · IP 地址 · 网关 · MAC · DNS 服务器 · 连接时长 · 双 WAN · 接收 / 发送流量 · IPv6 状态 / 地址 / LLA / 网关 · **实时上行 / 下行速率** · **协商速率** |
+| **主 Wi-Fi** | 2.4GHz SSID + 状态 + 信道 + 理论速率 · 5GHz SSID + 状态 + 信道 + 理论速率 · Wi-Fi 频段优选 |
 | **访客 Wi-Fi** | 访客 2.4GHz SSID + 状态 · 访客 5GHz SSID + 状态 |
 | **兼容网络** | Wi-Fi 5 兼容网络 2.4GHz / 5GHz 名称 |
 | **定时** | Wi-Fi 定时关闭 · 定时关闭时段（只读） |
 | **流量统计** | 总接收流量 · 总发送流量 |
-| **诊断** | 设备型号 · 软件版本 · 硬件版本 · 制造商 · 序列号 |
+| **Mesh 漫游** | 漫游阈值 2.4GHz / 5GHz（dBm）· 老旧设备漫游 |
+| **网络服务** | DMZ 主机 · DDNS 状态 · 智能 QoS · 端口转发规则数 · 家长控制设备数 |
+| **诊断** | 设备型号 · 软件版本 · 硬件版本 · 制造商 · 序列号 · 固件发布日期 · NTP 同步 · 路由器本地时间 |
 
 > `Wi-Fi 定时关闭` 该固件只提供读写接口 `vue_internet_advanced_rftimer_data`（hiddenData），当前做成了**只读传感器**；`Wi-Fi 中继`（`wlan_link_data`）与 `Preamble Puncturing` 在下发的固件里没有可用写接口，故未做成开关。
 
@@ -290,7 +294,7 @@ logger:
 
 #### 设备跟踪（每个终端一个）
 
-`在家` / `离家`，属性含 `mac`、`ip`、`hostname`、`connection_type`（LAN / 2.4GHz / 5GHz）、`interface`、`band`、`rssi`、`is_guest`、`parent_device`（上级 Mesh 节点）、`device_type`、`rx_bytes`、`tx_bytes`。
+`在家` / `离家`，属性含 `mac`、`ip`、`hostname`、`connection_type`（LAN / 2.4GHz / 5GHz）、`interface`、`band`、`rssi`、`is_guest`、`parent_device`（上级 Mesh 节点）、`device_type`、`rx_bytes`、`tx_bytes`，以及来自 App 端客户端表（`vue_client_data`）的：`alias`（在中兴智慧生活 App 里设置的备注名）、`ipv6` / `ipv6_gua`、`iface_type`、`last_connection`、`up_rate` / `down_rate`（实时速率）。
 
 ### 安装
 
